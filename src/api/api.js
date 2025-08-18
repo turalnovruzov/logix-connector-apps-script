@@ -18,21 +18,9 @@ function getApiToken() {
  * @return {Object} Request body for the API
  */
 function createApiRequestBody(requestedFieldIds) {
-  const columns =
-    requestedFieldIds.length > 0
-      ? requestedFieldIds.map((field) => `[${field}]`).join(", ")
-      : "[idn]";
-
-  const query = `Select ${columns} From sch_budget_report_view`;
-
   return {
-    Method: "GET",
-    Query: [
-      {
-        Type: "server",
-        Obj_query: query,
-      },
-    ],
+    Method: "GET_BUDGET_REPORT",
+    fields: requestedFieldIds.length > 0 ? requestedFieldIds : ["idn"]
   };
 }
 
@@ -71,20 +59,25 @@ function fetchFromLogixApi(requestedFieldIds, districtDbNumber) {
       };
     }
 
-    if (
-      jsonData.kind !== "Success" ||
-      !jsonData.objects ||
-      jsonData.objects.length === 0
-    ) {
+    // Check for failure response format
+    if (jsonData.kind === "Failure") {
       return {
         success: false,
-        error: "API response does not contain valid data",
+        error: `API error: ${jsonData.message || "Unknown error"}`,
+      };
+    }
+
+    // Success response should be a direct array
+    if (!Array.isArray(jsonData)) {
+      return {
+        success: false,
+        error: "API response is not in expected array format",
       };
     }
 
     return {
       success: true,
-      data: jsonData.objects[0].rows || [],
+      data: jsonData,
     };
   } catch (error) {
     return {
