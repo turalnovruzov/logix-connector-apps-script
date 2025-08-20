@@ -137,7 +137,12 @@ function getData(request) {
   }
 
   // If we reach here, we need to fetch fresh data
+  const apiStartTime = new Date();
+  Logger.log(`[TIMING] Starting API call to backend`);
   const apiResponse = fetchFromLogixApi(requestedFieldIds, districtDbNumber);
+  const apiEndTime = new Date();
+  const apiDuration = apiEndTime - apiStartTime;
+  Logger.log(`[TIMING] API call: ${apiDuration}ms`);
 
   // Handle API errors
   if (!apiResponse.success) {
@@ -157,7 +162,11 @@ function getData(request) {
   }
 
   // Process the API data for Looker Studio
+  const processingStartTime = new Date();
+  Logger.log(`[TIMING] Starting data processing for ${apiResponse.data.length} rows`);
   rows = processApiData(apiResponse.data, requestedFieldIds);
+  const processingDuration = new Date() - processingStartTime;
+  Logger.log(`[TIMING] Data processing: ${processingDuration}ms`);
   message = "Fetched fresh data from API";
 
   // Store the data in cache if caching is enabled
@@ -175,6 +184,19 @@ function getData(request) {
     Logger.log("Stored fresh data in cache with key: " + cacheKey);
     message += " and updated cache";
   }
+
+  // Log detailed timing breakdown
+  const totalDuration = new Date() - startTime;
+  const networkPercentage = Math.round((apiDuration / totalDuration) * 100);
+  const processingPercentage = Math.round((processingDuration / totalDuration) * 100);
+  const otherDuration = totalDuration - apiDuration - processingDuration;
+  const otherPercentage = Math.round((otherDuration / totalDuration) * 100);
+  
+  Logger.log(`[TIMING] === PERFORMANCE BREAKDOWN ===`);
+  Logger.log(`[TIMING] Total execution: ${totalDuration}ms`);
+  Logger.log(`[TIMING] - API network time: ${apiDuration}ms (${networkPercentage}%)`);
+  Logger.log(`[TIMING] - Data processing: ${processingDuration}ms (${processingPercentage}%)`);
+  Logger.log(`[TIMING] - Other operations: ${otherDuration}ms (${otherPercentage}%)`);
 
   // Log performance metrics
   logPerformance(startTime, rows, message);
